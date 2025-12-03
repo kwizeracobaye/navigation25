@@ -1,0 +1,3150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Cadet Navigation System</title>
+
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+
+  <style>
+    :root {
+      --card-bg: #ffffff;
+      --muted: #6b7280;
+      --accent: #2563eb;
+      --danger: #ef4444;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --info: #3b82f6;
+      --shadow: 0 6px 20px rgba(10,15,30,0.08);
+      --radius: 12px;
+      font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+    }
+
+    html, body, #app {
+      height: 100%;
+      margin: 0;
+      background: #f5f7fa;
+    }
+
+    /* Layout: full-screen map with floating panels */
+    #map {
+      height: 100%;
+      width: 100%;
+      display: block;
+    }
+
+    .panel {
+      background: var(--card-bg);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 16px;
+      transition: all 0.3s ease;
+    }
+
+    /* Top-left syndicates list */
+    .syndicates {
+      position: absolute;
+      left: 16px;
+      top: 16px;
+      width: 320px;
+      z-index: 1200;
+      max-height: 80vh;
+      overflow-y: auto;
+    }
+
+    .stats {
+      position: absolute;
+      left: 16px;
+      bottom: 16px;
+      width: 280px;
+      z-index: 1200;
+    }
+
+    .sysinfo {
+      position: absolute;
+      right: 16px;
+      bottom: 16px;
+      width: 280px;
+      z-index: 1200;
+    }
+
+    .toolbar {
+      position: absolute;
+      right: 16px;
+      top: 80px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      z-index: 1200;
+    }
+
+    .tool-btn {
+      width: 46px;
+      height: 46px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      background: var(--card-bg);
+      box-shadow: var(--shadow);
+      transition: all 0.2s ease;
+    }
+
+    .tool-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(10,15,30,0.12);
+    }
+
+    /* Draggable popup styles */
+    .draggable-popup {
+      position: absolute;
+      width: 380px;
+      z-index: 1300;
+      cursor: move;
+      resize: both;
+      overflow: auto;
+      min-height: 200px;
+      min-width: 350px;
+      max-width: 500px;
+      max-height: 700px;
+    }
+    
+    .draggable-popup .panel {
+      height: 100%;
+      overflow-y: auto;
+    }
+    
+    .popup-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 12px;
+      border-bottom: 1px solid #e5e7eb;
+      margin-bottom: 12px;
+      cursor: move;
+    }
+    
+    .popup-controls {
+      display: flex;
+      gap: 8px;
+    }
+    
+    .popup-btn {
+      background: none;
+      border: none;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 14px;
+      width: 24px;
+      height: 24px;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .popup-btn:hover {
+      background: #f3f4f6;
+    }
+
+    /* small visual touches */
+    h3 {
+      margin: 0 0 12px 0;
+      font-size: 18px;
+      font-weight: 600;
+      color: #1f2937;
+    }
+    
+    h4 {
+      margin: 16px 0 8px 0;
+      font-size: 15px;
+      color: #374151;
+    }
+    
+    p {
+      margin: 6px 0;
+      color: var(--muted);
+      font-size: 14px;
+    }
+    
+    .row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    
+    .badge {
+      background: #eef2ff;
+      color: #1e3a8a;
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    
+    .badge.active {
+      background: #d1fae5;
+      color: #065f46;
+    }
+
+    /* Radio button styling */
+    .radio-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin: 12px 0;
+    }
+    
+    .radio-item {
+      display: flex;
+      align-items: center;
+      padding: 10px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    
+    .radio-item:hover {
+      background: #f7f7fb;
+    }
+    
+    .radio-item input {
+      margin-right: 10px;
+    }
+    
+    .radio-item label {
+      flex: 1;
+      cursor: pointer;
+      font-weight: 500;
+    }
+    
+    .radio-item .status {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      margin-right: 8px;
+    }
+    
+    .radio-item .status.online {
+      background: var(--success);
+    }
+    
+    .radio-item .status.offline {
+      background: var(--muted);
+    }
+
+    /* Controls */
+    .controls {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 12px;
+    }
+    
+    .btn {
+      padding: 10px 14px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      font-weight: 500;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+    
+    .btn:hover {
+      transform: translateY(-1px);
+    }
+    
+    .btn-primary {
+      background: var(--accent);
+      color: white;
+    }
+    
+    .btn-danger {
+      background: var(--danger);
+      color: white;
+    }
+    
+    .btn-outline {
+      background: transparent;
+      color: var(--accent);
+      border: 1px solid var(--accent);
+    }
+    
+    .btn-success {
+      background: var(--success);
+      color: white;
+    }
+    
+    .btn-warning {
+      background: var(--warning);
+      color: white;
+    }
+
+    /* Map style switcher */
+    .map-style {
+      position: absolute;
+      left: 50%;
+      bottom: 20px;
+      transform: translateX(-50%);
+      z-index: 1200;
+      display: flex;
+      gap: 8px;
+      background: var(--card-bg);
+      padding: 8px;
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+    
+    .map-style-btn {
+      padding: 8px 12px;
+      border-radius: 6px;
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      font-size: 13px;
+      transition: all 0.2s;
+    }
+    
+    .map-style-btn.active {
+      background: var(--accent);
+      color: white;
+    }
+
+    /* Responsive behaviour */
+    @media (max-width: 880px) {
+      .syndicates {
+        left: 50%;
+        transform: translateX(-50%);
+        top: 10px;
+        width: 92%;
+      }
+      
+      .toolbar {
+        right: 10px;
+        top: 64px;
+        flex-direction: row;
+      }
+      
+      .toolbar .tool-btn {
+        width: 40px;
+        height: 40px;
+      }
+      
+      .stats, .sysinfo {
+        left: 10px;
+        bottom: 120px;
+        width: 45%;
+      }
+      
+      .map-style {
+        bottom: 120px;
+      }
+    }
+
+    @media (max-width: 520px) {
+      .syndicates {
+        top: 8px;
+        padding: 12px;
+      }
+      
+      .stats, .sysinfo {
+        display: none;
+      }
+      
+      .map-style {
+        bottom: 16px;
+      }
+    }
+    
+    /* Status indicators */
+    .status-indicator {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      margin-right: 6px;
+    }
+    
+    .status-online {
+      background: var(--success);
+    }
+    
+    .status-offline {
+      background: var(--muted);
+    }
+    
+    /* Route styling */
+    .route-polyline {
+      stroke-width: 4;
+      stroke-opacity: 0.8;
+      fill: none;
+    }
+    
+    .route-start-marker {
+      background-color: #10b981;
+      border: 2px solid white;
+    }
+    
+    .route-end-marker {
+      background-color: #ef4444;
+      border: 2px solid white;
+    }
+    
+    .route-waypoint-marker {
+      background-color: #f59e0b;
+      border: 2px solid white;
+    }
+    
+    /* Route Control Panel */
+    .route-management {
+      position: absolute;
+      right: 16px;
+      top: 16px;
+      width: 320px;
+      z-index: 1200;
+    }
+    
+    .route-list {
+      max-height: 300px;
+      overflow-y: auto;
+      margin: 12px 0;
+    }
+    
+    .route-item {
+      display: flex;
+      align-items: center;
+      padding: 10px 12px;
+      border-radius: 8px;
+      margin-bottom: 8px;
+      background: #f8fafc;
+      border-left: 4px solid #3b82f6;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .route-item:hover {
+      background: #f0f9ff;
+      transform: translateX(2px);
+    }
+    
+    .route-item.active {
+      background: #e0f2fe;
+      border-left-color: #0ea5e9;
+    }
+    
+    .route-info {
+      flex: 1;
+    }
+    
+    .route-name {
+      font-weight: 600;
+      font-size: 14px;
+    }
+    
+    .route-stats {
+      font-size: 12px;
+      color: var(--muted);
+    }
+    
+    .route-actions {
+      display: flex;
+      gap: 4px;
+    }
+    
+    .route-action-btn {
+      background: none;
+      border: none;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 12px;
+      width: 20px;
+      height: 20px;
+      border-radius: 3px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .route-action-btn:hover {
+      background: #e5e7eb;
+    }
+    
+    .route-progress {
+      margin: 12px 0;
+    }
+    
+    .route-distance {
+      font-size: 14px;
+      color: var(--muted);
+      text-align: center;
+      margin-top: 4px;
+    }
+    
+    .route-waypoint-list {
+      max-height: 200px;
+      overflow-y: auto;
+      margin: 12px 0;
+    }
+    
+    .waypoint-item {
+      display: flex;
+      align-items: center;
+      padding: 8px;
+      border-radius: 6px;
+      margin-bottom: 6px;
+      background: #f8fafc;
+    }
+    
+    .waypoint-number {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: #3b82f6;
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 600;
+      margin-right: 10px;
+    }
+    
+    .waypoint-info {
+      flex: 1;
+    }
+    
+    .waypoint-name {
+      font-weight: 500;
+      font-size: 14px;
+    }
+    
+    .waypoint-coords {
+      font-size: 12px;
+      color: var(--muted);
+    }
+    
+    .waypoint-actions {
+      display: flex;
+      gap: 4px;
+    }
+    
+    /* Panel collapsible styles */
+    .panel-collapsible .content {
+      transition: all 0.3s ease;
+      overflow: hidden;
+    }
+    
+    .panel-collapsible.collapsed .content {
+      max-height: 0;
+      opacity: 0;
+      margin: 0;
+    }
+    
+    .panel-collapsible:not(.collapsed) .content {
+      max-height: 1000px;
+      opacity: 1;
+    }
+    
+    .toggle-btn {
+      background: none;
+      border: none;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 8px;
+      border-radius: 4px;
+    }
+    
+    .toggle-btn:hover {
+      background: #f3f4f6;
+    }
+    
+    /* Navigation Tabs */
+    .nav-tabs {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      background: white;
+      z-index: 1300;
+      padding: 0 16px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      display: flex;
+    }
+    
+    .nav-tab {
+      padding: 12px 16px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-weight: 500;
+      border-bottom: 2px solid transparent;
+      color: #6b7280;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+    
+    .nav-tab:hover {
+      color: #374151;
+      background: #f9fafb;
+    }
+    
+    .nav-tab.active {
+      border-bottom-color: var(--accent);
+      color: var(--accent);
+      background: #f0f9ff;
+    }
+    
+    /* Tab Content */
+    .tab-content {
+      display: none;
+    }
+    
+    .tab-content.active {
+      display: block;
+    }
+    
+    /* Exercise Control Panel */
+    .exercise-control {
+      position: absolute;
+      right: 16px;
+      top: 16px;
+      width: 320px;
+      z-index: 1200;
+    }
+    
+    /* Form Controls */
+    .form-group {
+      margin-bottom: 12px;
+    }
+    
+    .form-label {
+      display: block;
+      margin-bottom: 6px;
+      font-weight: 500;
+      font-size: 14px;
+    }
+    
+    .form-input {
+      width: 100%;
+      padding: 8px 12px;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      font-size: 14px;
+      box-sizing: border-box;
+    }
+    
+    .form-select {
+      width: 100%;
+      padding: 8px 12px;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      font-size: 14px;
+      background: white;
+      box-sizing: border-box;
+    }
+    
+    /* Progress Bar */
+    .progress-container {
+      margin: 12px 0;
+    }
+    
+    .progress-label {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 6px;
+      font-size: 14px;
+    }
+    
+    .progress-bar {
+      height: 8px;
+      background: #e5e7eb;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    
+    .progress-fill {
+      height: 100%;
+      background: var(--success);
+      transition: width 0.3s ease;
+    }
+    
+    /* Modal Styles */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1400;
+    }
+    
+    .modal {
+      background: white;
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      width: 90%;
+      max-width: 500px;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+    
+    .modal-header {
+      padding: 16px;
+      border-bottom: 1px solid #e5e7eb;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .modal-body {
+      padding: 16px;
+    }
+    
+    .modal-footer {
+      padding: 16px;
+      border-top: 1px solid #e5e7eb;
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+    
+    /* DMS Input */
+    .dms-input {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+    
+    .dms-input input {
+      flex: 1;
+      text-align: center;
+    }
+    
+    .dms-label {
+      font-size: 12px;
+      color: var(--muted);
+      text-align: center;
+      margin-top: 4px;
+    }
+    
+    /* Exercise Status */
+    .exercise-status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    
+    .exercise-indicator {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+    }
+    
+    .exercise-indicator.active {
+      background: var(--success);
+      box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.3);
+      animation: pulse 2s infinite;
+    }
+    
+    .exercise-indicator.inactive {
+      background: var(--muted);
+    }
+    
+    @keyframes pulse {
+      0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+      70% { box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+    }
+    
+    .exercise-timer {
+      font-size: 24px;
+      font-weight: 600;
+      text-align: center;
+      margin: 12px 0;
+      font-family: monospace;
+    }
+    
+    /* Checkpoint Items */
+    .checkpoint-item {
+      display: flex;
+      align-items: center;
+      padding: 8px;
+      border-radius: 6px;
+      margin-bottom: 6px;
+      background: #f8fafc;
+    }
+    
+    .checkpoint-status {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      margin-right: 10px;
+    }
+    
+    .checkpoint-status.completed {
+      background: var(--success);
+    }
+    
+    .checkpoint-status.pending {
+      background: var(--warning);
+    }
+    
+    .checkpoint-info {
+      flex: 1;
+    }
+    
+    .checkpoint-name {
+      font-weight: 500;
+      font-size: 14px;
+    }
+    
+    .checkpoint-time {
+      font-size: 12px;
+      color: var(--muted);
+    }
+    
+    .checkpoint-actions {
+      display: flex;
+      gap: 4px;
+    }
+    
+    .violation-alert {
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      border-radius: 6px;
+      padding: 8px 12px;
+      margin: 8px 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    /* Report Styles */
+    .report-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+    
+    .report-section {
+      margin-bottom: 20px;
+    }
+    
+    .completion-circle {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      background: conic-gradient(var(--success) 0% var(--p), #e5e7eb var(--p) 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 12px;
+      position: relative;
+    }
+    
+    .completion-circle::before {
+      content: '';
+      position: absolute;
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      background: white;
+    }
+    
+    .completion-percent {
+      position: relative;
+      font-weight: 600;
+      font-size: 18px;
+    }
+    
+    /* Scrollbar styling for popups */
+    .draggable-popup .panel {
+      scrollbar-width: thin;
+      scrollbar-color: #cbd5e1 #f1f5f9;
+    }
+    
+    .draggable-popup .panel::-webkit-scrollbar {
+      width: 10px;
+    }
+    
+    .draggable-popup .panel::-webkit-scrollbar-track {
+      background: #f1f5f9;
+      border-radius: 10px;
+      margin: 5px 0;
+    }
+    
+    .draggable-popup .panel::-webkit-scrollbar-thumb {
+      background: linear-gradient(180deg, #cbd5e1 0%, #94a3b8 100%);
+      border-radius: 10px;
+      border: 3px solid #f1f5f9;
+      min-height: 40px;
+    }
+    
+    .draggable-popup .panel::-webkit-scrollbar-thumb:hover {
+      background: linear-gradient(180deg, #94a3b8 0%, #64748b 100%);
+      border-color: #e2e8f0;
+    }
+    
+    .draggable-popup .panel::-webkit-scrollbar-thumb:active {
+      background: #475569;
+    }
+    
+    /* Scrollbar for popup content area */
+    .draggable-popup .content {
+      scrollbar-width: thin;
+      scrollbar-color: #cbd5e1 #f1f5f9;
+      max-height: 550px;
+      overflow-y: auto;
+    }
+    
+    .draggable-popup .content::-webkit-scrollbar {
+      width: 10px;
+    }
+    
+    .draggable-popup .content::-webkit-scrollbar-track {
+      background: #f1f5f9;
+      border-radius: 10px;
+      margin: 5px 0;
+    }
+    
+    .draggable-popup .content::-webkit-scrollbar-thumb {
+      background: linear-gradient(180deg, #cbd5e1 0%, #94a3b8 100%);
+      border-radius: 10px;
+      border: 3px solid #f1f5f9;
+      min-height: 40px;
+    }
+    
+    .draggable-popup .content::-webkit-scrollbar-thumb:hover {
+      background: linear-gradient(180deg, #94a3b8 0%, #64748b 100%);
+      border-color: #e2e8f0;
+    }
+    
+    .draggable-popup .content::-webkit-scrollbar-thumb:active {
+      background: #475569;
+    }
+  </style>
+</head>
+<body>
+
+<div id="app">
+  <div id="map"></div>
+
+  <!-- Navigation Tabs -->
+  <div class="nav-tabs">
+    <button class="nav-tab active" data-tab="dashboard">
+      <i class="fas fa-map"></i> Dashboard
+    </button>
+    <button class="nav-tab" data-tab="routes">
+      <i class="fas fa-route"></i> Route Management
+    </button>
+    <button class="nav-tab" data-tab="exercise">
+      <i class="fas fa-play-circle"></i> Exercise Control
+    </button>
+    <button class="nav-tab" data-tab="boundaries">
+      <i class="fas fa-draw-polygon"></i> Boundary Management
+    </button>
+    <button class="nav-tab" data-tab="reports">
+      <i class="fas fa-chart-bar"></i> Reports
+    </button>
+  </div>
+
+  <!-- Dashboard Tab Content (ACTIVE BY DEFAULT) -->
+  <div class="tab-content active" id="dashboard-tab">
+    <!-- Syndicates list (top-left) -->
+    <div class="syndicates panel panel-collapsible" id="syndicatesPanel">
+      <div class="row">
+        <h3 style="margin: 0; flex: 1;">Syndicates</h3>
+        <button class="toggle-btn" id="toggleSyndicates">
+          <i class="fas fa-chevron-up"></i> Collapse
+        </button>
+      </div>
+      <div class="content">
+        <div class="radio-group" id="syndicateList">
+          <!-- Syndicate radio buttons will be generated here -->
+        </div>
+        
+        <div class="controls">
+          <button class="btn btn-primary" id="centerBtn">
+            <i class="fas fa-crosshairs"></i> Center
+          </button>
+          <button class="btn btn-outline" id="toggleAll">
+            <i class="fas fa-eye"></i> Show All
+          </button>
+          <button class="btn btn-outline" id="toggleCheckpoints">
+            <i class="fas fa-map-marker-alt"></i> CPs
+          </button>
+          <button class="btn btn-outline" id="toggleRoutes">
+            <i class="fas fa-route"></i> Routes
+          </button>
+          <button class="btn btn-success" id="addSyndicateBtn">
+            <i class="fas fa-plus"></i> Add Syndicate
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tracking stats (bottom-left) -->
+    <div class="stats panel panel-collapsible" id="statsPanel">
+      <div class="row">
+        <h3 style="margin: 0; flex: 1;">Tracking Stats</h3>
+        <button class="toggle-btn" id="toggleStats">
+          <i class="fas fa-chevron-up"></i> Collapse
+        </button>
+      </div>
+      <div class="content">
+        <div class="row"><span>Distance</span><strong id="statDist">8.3 km</strong></div>
+        <div class="row"><span>Time</span><strong id="statTime">31 min</strong></div>
+        <div class="row"><span>Avg Speed</span><strong id="statAvg">15.1 km/h</strong></div>
+        <div class="row"><span>Max Speed</span><strong id="statMax">43.17 km/h</strong></div>
+      </div>
+    </div>
+
+    <!-- System info (bottom-right) -->
+    <div class="sysinfo panel panel-collapsible" id="sysPanel">
+      <div class="row">
+        <h3 style="margin: 0; flex: 1;">System Info</h3>
+        <button class="toggle-btn" id="toggleSysInfo">
+          <i class="fas fa-chevron-up"></i> Collapse
+        </button>
+      </div>
+      <div class="content">
+        <div class="row"><span>Last Updated</span><strong id="lastUpdated">—</strong></div>
+        <div class="row"><span>Way Points</span><strong id="waypoints">120 / 10000</strong></div>
+        <div class="row"><span>Auto-refresh</span><strong id="autoref">ON</strong></div>
+      </div>
+    </div>
+
+    <!-- Vertical toolbar (right) -->
+    <div class="toolbar" id="toolbar">
+      <div class="tool-btn" title="Zoom In" id="zoomIn">
+        <i class="fas fa-plus"></i>
+      </div>
+      <div class="tool-btn" title="Zoom Out" id="zoomOut">
+        <i class="fas fa-minus"></i>
+      </div>
+      <div class="tool-btn" title="Locate" id="locateBtn">
+        <i class="fas fa-location-arrow"></i>
+      </div>
+      <div class="tool-btn" title="Add Checkpoint" id="addCheckpointBtn">
+        <i class="fas fa-map-marker-alt"></i>
+      </div>
+      <div class="tool-btn" title="Clear Popups" id="clearPopups">
+        <i class="fas fa-times"></i>
+      </div>
+      <div class="tool-btn" title="Export" id="exportBtn">
+        <i class="fas fa-download"></i>
+      </div>
+    </div>
+
+    <!-- Map style switcher -->
+    <div class="map-style">
+      <button class="map-style-btn active" data-style="osm">Map</button>
+      <button class="map-style-btn" data-style="satellite">Satellite</button>
+      <button class="map-style-btn" data-style="dark">Dark</button>
+    </div>
+  </div>
+
+  <!-- Route Management Tab Content (HIDDEN BY DEFAULT) -->
+  <div class="tab-content" id="routes-tab">
+    <div class="route-management panel panel-collapsible" id="routesPanel">
+      <div class="row">
+        <h3 style="margin: 0; flex: 1;">Route Management</h3>
+        <button class="toggle-btn" id="toggleRoutesPanel">
+          <i class="fas fa-chevron-up"></i> Collapse
+        </button>
+      </div>
+      <div class="content">
+        <div class="controls" style="margin-bottom: 12px;">
+          <button class="btn btn-success" id="createRouteBtn">
+            <i class="fas fa-plus"></i> Create Route
+          </button>
+        </div>
+        
+        <div class="route-list" id="routeList">
+          <!-- Routes will be dynamically generated here -->
+        </div>
+        
+        <div id="routeDetails" style="display: none;">
+          <h4 id="selectedRouteName">Route Details</h4>
+          
+          <div class="route-progress">
+            <div class="progress-label">
+              <span>Completion</span>
+              <span id="routeProgressPercent">0%</span>
+            </div>
+            <div class="progress-bar">
+              <div class="progress-fill" id="routeProgressBar" style="width: 0%"></div>
+            </div>
+          </div>
+          
+          <div class="row" style="margin: 12px 0;">
+            <span>Distance:</span>
+            <strong id="routeDistance">0 km</strong>
+          </div>
+          
+          <h4>Waypoints</h4>
+          <div class="route-waypoint-list" id="routeWaypoints">
+            <!-- Waypoints will be dynamically generated here -->
+          </div>
+          
+          <div class="controls">
+            <button class="btn btn-primary" id="editRouteBtn">
+              <i class="fas fa-edit"></i> Edit Route
+            </button>
+            <button class="btn btn-warning" id="toggleRouteVisibilityBtn">
+              <i class="fas fa-eye"></i> Show Route
+            </button>
+            <button class="btn btn-danger" id="deleteRouteBtn">
+              <i class="fas fa-trash"></i> Delete Route
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Exercise Control Tab Content (HIDDEN BY DEFAULT) -->
+  <div class="tab-content" id="exercise-tab">
+    <div class="exercise-control panel panel-collapsible" id="exercisePanel">
+      <div class="row">
+        <h3 style="margin: 0; flex: 1;">Exercise Control</h3>
+        <button class="toggle-btn" id="toggleExercisePanel">
+          <i class="fas fa-chevron-up"></i> Collapse
+        </button>
+      </div>
+      <div class="content">
+        <div class="exercise-status">
+          <div class="exercise-indicator inactive" id="exerciseIndicator"></div>
+          <span id="exerciseStatusText">Exercise Not Started</span>
+        </div>
+        
+        <div class="exercise-timer" id="exerciseTimer">00:00:00</div>
+        
+        <div class="exercise-progress">
+          <div class="progress-label">
+            <span>Progress</span>
+            <span id="exerciseProgressPercent">0%</span>
+          </div>
+          <div class="progress-bar">
+            <div class="progress-fill" id="exerciseProgressBar" style="width: 0%"></div>
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label">Exercise Duration (minutes)</label>
+          <input type="number" class="form-input" id="exerciseDuration" value="60" min="1">
+        </div>
+        
+        <div class="controls">
+          <button class="btn btn-success" id="startExerciseBtn">
+            <i class="fas fa-play"></i> Start Exercise
+          </button>
+          <button class="btn btn-danger" id="endExerciseBtn" disabled>
+            <i class="fas fa-stop"></i> End Exercise
+          </button>
+          <button class="btn btn-outline" id="resetExerciseBtn">
+            <i class="fas fa-redo"></i> Reset
+          </button>
+        </div>
+        
+        <div class="route-controls" style="margin-top: 12px;">
+          <button class="btn btn-outline" id="showAllRoutesBtn" style="width: 48%;">
+            <i class="fas fa-route"></i> Show All Routes
+          </button>
+          <button class="btn btn-outline" id="hideAllRoutesBtn" style="width: 48%;">
+            <i class="fas fa-eye-slash"></i> Hide All Routes
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Boundary Management Tab Content (HIDDEN BY DEFAULT) -->
+  <div class="tab-content" id="boundaries-tab">
+    <div class="syndicates panel panel-collapsible" id="boundariesPanel">
+      <div class="row">
+        <h3 style="margin: 0; flex: 1;">Boundary Management</h3>
+        <button class="toggle-btn" id="toggleBoundariesPanel">
+          <i class="fas fa-chevron-up"></i> Collapse
+        </button>
+      </div>
+      <div class="content">
+        <div class="form-group">
+          <label class="form-label">Boundary Name</label>
+          <input type="text" class="form-input" id="boundaryName" placeholder="Enter boundary name">
+        </div>
+        
+        <h4>Set Boundary Coordinates (DMS Format)</h4>
+        
+        <div class="form-group">
+          <label class="form-label">North Boundary</label>
+          <div class="dms-input">
+            <input type="number" class="form-input" id="northDegrees" placeholder="Deg" min="0" max="90">
+            <input type="number" class="form-input" id="northMinutes" placeholder="Min" min="0" max="59">
+            <input type="number" class="form-input" id="northSeconds" placeholder="Sec" min="0" max="59" step="0.001">
+          </div>
+          <div class="dms-label">Degrees ° Minutes ' Seconds "</div>
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label">South Boundary</label>
+          <div class="dms-input">
+            <input type="number" class="form-input" id="southDegrees" placeholder="Deg" min="0" max="90">
+            <input type="number" class="form-input" id="southMinutes" placeholder="Min" min="0" max="59">
+            <input type="number" class="form-input" id="southSeconds" placeholder="Sec" min="0" max="59" step="0.001">
+          </div>
+          <div class="dms-label">Degrees ° Minutes ' Seconds "</div>
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label">East Boundary</label>
+          <div class="dms-input">
+            <input type="number" class="form-input" id="eastDegrees" placeholder="Deg" min="0" max="180">
+            <input type="number" class="form-input" id="eastMinutes" placeholder="Min" min="0" max="59">
+            <input type="number" class="form-input" id="eastSeconds" placeholder="Sec" min="0" max="59" step="0.001">
+          </div>
+          <div class="dms-label">Degrees ° Minutes ' Seconds "</div>
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label">West Boundary</label>
+          <div class="dms-input">
+            <input type="number" class="form-input" id="westDegrees" placeholder="Deg" min="0" max="180">
+            <input type="number" class="form-input" id="westMinutes" placeholder="Min" min="0" max="59">
+            <input type="number" class="form-input" id="westSeconds" placeholder="Sec" min="0" max="59" step="0.001">
+          </div>
+          <div class="dms-label">Degrees ° Minutes ' Seconds "</div>
+        </div>
+        
+        <div class="controls">
+          <button class="btn btn-primary" id="setBoundaryBtn">
+            <i class="fas fa-draw-polygon"></i> Set Boundary
+          </button>
+          <button class="btn btn-outline" id="clearBoundaryBtn">
+            <i class="fas fa-trash"></i> Clear Boundary
+          </button>
+          <button class="btn btn-success" id="detectViolationsBtn">
+            <i class="fas fa-exclamation-triangle"></i> Detect Violations
+          </button>
+        </div>
+        
+        <div id="violationAlerts" style="margin-top: 12px;">
+          <!-- Violation alerts will appear here -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Reports Tab Content (HIDDEN BY DEFAULT) -->
+  <div class="tab-content" id="reports-tab">
+    <div class="syndicates panel panel-collapsible" id="reportsPanel">
+      <div class="row">
+        <h3 style="margin: 0; flex: 1;">Exercise Reports & Analytics</h3>
+        <button class="toggle-btn" id="toggleReportsPanel">
+          <i class="fas fa-chevron-up"></i> Collapse
+        </button>
+      </div>
+      <div class="content">
+        <div class="report-header" style="margin-bottom: 16px;">
+          <button class="btn btn-primary" id="generateReportBtn">
+            <i class="fas fa-file-export"></i> Generate Report
+          </button>
+        </div>
+        
+        <div class="report-section">
+          <h4>Overall Performance</h4>
+          <div class="completion-circle" id="overallCompletionCircle" style="--p: 0%">
+            <div class="completion-percent" id="overallCompletionPercent">0%</div>
+          </div>
+          <p style="text-align: center;">Combined Completion Rate</p>
+        </div>
+        
+        <div class="report-section">
+          <h4>Syndicate Performance Summary</h4>
+          <div id="syndicateReports">
+            <!-- Syndicate reports will be generated here -->
+          </div>
+        </div>
+        
+        <div class="report-section">
+          <h4>Checkpoint Status Tracking</h4>
+          <div id="checkpointReports">
+            <!-- Checkpoint reports will be generated here -->
+          </div>
+        </div>
+        
+        <div class="controls">
+          <button class="btn btn-outline" id="printReportBtn">
+            <i class="fas fa-print"></i> Print Report
+          </button>
+          <button class="btn btn-success" id="exportReportBtn">
+            <i class="fas fa-download"></i> Export CSV
+          </button>
+          <button class="btn btn-outline" id="refreshReportBtn">
+            <i class="fas fa-sync-alt"></i> Refresh
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Global variables
+  let syndicates = {};
+  let markers = {};
+  let popups = {};
+  let checkpointMarkers = {};
+  let showCheckpoints = false;
+  let nextSyndicateId = 8;
+  let nextCheckpointId = 1;
+  let map;
+  let exerciseActive = false;
+  let exerciseStartTime = null;
+  let exerciseDuration = 60;
+  let exerciseTimer = null;
+  let boundaryPolygon = null;
+  let routesVisible = false;
+  let routeLayers = {};
+  let waypointMarkers = {};
+  
+  // Route Management Variables
+  let routes = {};
+  let nextRouteId = 1;
+  let selectedRouteId = null;
+  let routeMarkers = {};
+  let activeRouteLayer = null;
+
+  // DMS to Decimal conversion functions
+  function dmsToDecimal(degrees, minutes, seconds, direction) {
+    let decimal = degrees + minutes / 60 + seconds / 3600;
+    if (direction === 'S' || direction === 'W') {
+      decimal = -decimal;
+    }
+    return decimal;
+  }
+
+  function decimalToDMS(decimal, isLatitude) {
+    const absDecimal = Math.abs(decimal);
+    const degrees = Math.floor(absDecimal);
+    const minutes = Math.floor((absDecimal - degrees) * 60);
+    const seconds = ((absDecimal - degrees - minutes / 60) * 3600).toFixed(3);
+    
+    let direction;
+    if (isLatitude) {
+      direction = decimal >= 0 ? 'N' : 'S';
+    } else {
+      direction = decimal >= 0 ? 'E' : 'W';
+    }
+    
+    return {
+      degrees: degrees,
+      minutes: minutes,
+      seconds: parseFloat(seconds),
+      direction: direction
+    };
+  }
+
+  // Parse DMS string to decimal
+  function parseDMS(dmsString) {
+    // Simple parser for DMS format
+    const regex = /(\d+)°\s*(\d+)'\s*([\d.]+)"\s*([NSEW])/i;
+    const match = dmsString.match(regex);
+    
+    if (!match) return NaN;
+    
+    const degrees = parseFloat(match[1]);
+    const minutes = parseFloat(match[2]);
+    const seconds = parseFloat(match[3]);
+    const direction = match[4].toUpperCase();
+    
+    let decimal = degrees + minutes / 60 + seconds / 3600;
+    if (direction === 'S' || direction === 'W') {
+      decimal = -decimal;
+    }
+    
+    return decimal;
+  }
+
+  // Initialize map only after DOM and Leaflet are ready.
+  function initMap() {
+    if (typeof L === 'undefined') {
+      console.error('Leaflet (L) is not loaded.');
+      return;
+    }
+
+    // Rwanda map setup - centered on your location
+    const rwandaCenter = [-2.235037729695317, 30.181238223828657];
+    map = L.map('map', {zoomControl:false}).setView(rwandaCenter, 13);
+
+    // Define tile layers
+    const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '&copy; OpenStreetMap contributors'
+    });
+    
+    const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+      maxZoom: 19,
+      attribution: '&copy; Esri, DigitalGlobe, GeoEye, Earthstar Geographics, CNES/Airbus DS, USDA, USGS, AeroGRID, IGN, and the GIS User Community'
+    });
+    
+    const darkLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+      maxZoom: 19,
+      attribution: '&copy; OpenStreetMap contributors &copy; CARTO'
+    });
+    
+    // Add default layer
+    osmLayer.addTo(map);
+    
+    // Layer control
+    const baseLayers = {
+      "Map": osmLayer,
+      "Satellite": satelliteLayer,
+      "Dark": darkLayer
+    };
+    
+    // simple zoom control positioned topright
+    L.control.zoom({position:'topright'}).addTo(map);
+
+    // Create custom syndicate icons with different colors
+    const syndicateIcons = {};
+    const colors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#84cc16'];
+    
+    for (let i = 1; i <= 7; i++) {
+      syndicateIcons[i] = L.divIcon({
+        html: `<div style="background-color: ${colors[i-1]}; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 12px; font-weight: bold; border: 2px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.2);">${i}</div>`,
+        className: 'syndicate-icon',
+        iconSize: [28, 28],
+        iconAnchor: [14, 14]
+      });
+    }
+
+    // Generate checkpoints for each syndicate
+    function generateCheckpoints(syndicateId, baseLat, baseLng) {
+      const checkpoints = [];
+      const numCheckpoints = 5;
+      
+      for (let i = 1; i <= numCheckpoints; i++) {
+        const lat = baseLat + (Math.random() - 0.5) * 0.03;
+        const lng = baseLng + (Math.random() - 0.5) * 0.03;
+        
+        const status = Math.random() > 0.3 ? 'completed' : 'pending';
+        const completionTime = status === 'completed' ? 
+          new Date(Date.now() - Math.random() * 3600000).toLocaleTimeString() : null;
+        
+        checkpoints.push({
+          id: `cp${nextCheckpointId++}`,
+          name: `CP${i}`,
+          latlng: [lat, lng],
+          status: status,
+          completionTime: completionTime,
+          colorClass: syndicateId <= 3 ? 'cp-color-1' : 'cp-color-4'
+        });
+      }
+      
+      return checkpoints;
+    }
+
+    // Generate syndicate data (7 syndicates near Rwanda)
+    const baseLat = -2.2350;
+    const baseLng = 30.1812;
+    
+    for (let i = 1; i <= 7; i++) {
+      const lat = baseLat + (Math.random() - 0.5) * 0.05;
+      const lng = baseLng + (Math.random() - 0.5) * 0.05;
+      
+      const checkpoints = generateCheckpoints(i, lat, lng);
+      
+      const completedCount = checkpoints.filter(cp => cp.status === 'completed').length;
+      const completionPercent = Math.round((completedCount / checkpoints.length) * 100);
+      
+      syndicates[i] = {
+        id: i,
+        name: `Syndicate ${i}`,
+        latlng: [lat, lng],
+        icon: syndicateIcons[i],
+        status: Math.random() > 0.2 ? 'active' : 'inactive',
+        color: colors[i-1],
+        checkpoints: checkpoints,
+        completionPercent: completionPercent,
+        completedCount: completedCount,
+        totalCheckpoints: checkpoints.length
+      };
+    }
+    
+    // Generate initial routes for syndicates
+    generateInitialRoutes();
+    
+    // Add markers for the initially selected syndicate
+    addMarkersForSyndicate('1');
+    generateSyndicateList();
+    updateRouteList();
+    
+    // Initialize panel collapse states
+    initializePanelCollapse();
+    
+    // ========== BUTTON EVENT LISTENERS ==========
+    
+    // Center button
+    document.getElementById('centerBtn').addEventListener('click', centerOnSelectedSyndicate);
+    
+    // Show all units
+    document.getElementById('toggleAll').addEventListener('click', showAllSyndicates);
+    
+    // Toggle checkpoints
+    document.getElementById('toggleCheckpoints').addEventListener('click', toggleCheckpoints);
+    
+    // Toggle routes
+    document.getElementById('toggleRoutes').addEventListener('click', toggleRoutes);
+    
+    // Add syndicate button
+    document.getElementById('addSyndicateBtn').addEventListener('click', showAddSyndicateModal);
+    
+    // Add checkpoint button
+    document.getElementById('addCheckpointBtn').addEventListener('click', showAddCheckpointModal);
+
+    // Toolbar actions
+    document.getElementById('zoomIn').addEventListener('click', ()=> map.zoomIn());
+    document.getElementById('zoomOut').addEventListener('click', ()=> map.zoomOut());
+    document.getElementById('locateBtn').addEventListener('click', locateUser);
+    document.getElementById('clearPopups').addEventListener('click', clearAllPopups);
+    document.getElementById('exportBtn').addEventListener('click', exportData);
+
+    // Map style switcher
+    document.querySelectorAll('.map-style-btn').forEach(btn => {
+      btn.addEventListener('click', switchMapStyle);
+    });
+
+    // Update last updated field periodically
+    setInterval(()=>{
+      document.getElementById('lastUpdated').textContent = new Date().toLocaleTimeString();
+      
+      // Update times in open popups
+      Object.keys(popups).forEach(id => {
+        const timeElement = document.getElementById(`syndicateTime-${id}`);
+        if (timeElement) {
+          timeElement.textContent = new Date().toLocaleTimeString();
+        }
+      });
+    },5000);
+
+    // Navigation tabs
+    document.querySelectorAll('.nav-tab').forEach(tab => {
+      tab.addEventListener('click', switchTab);
+    });
+
+    // Exercise Control buttons
+    document.getElementById('startExerciseBtn').addEventListener('click', startExercise);
+    document.getElementById('endExerciseBtn').addEventListener('click', endExercise);
+    document.getElementById('resetExerciseBtn').addEventListener('click', resetExercise);
+    document.getElementById('showAllRoutesBtn').addEventListener('click', showAllRoutes);
+    document.getElementById('hideAllRoutesBtn').addEventListener('click', hideAllRoutes);
+    
+    // Route Management buttons
+    document.getElementById('createRouteBtn').addEventListener('click', showCreateRouteModal);
+    document.getElementById('editRouteBtn').addEventListener('click', showEditRouteModal);
+    document.getElementById('toggleRouteVisibilityBtn').addEventListener('click', toggleRouteVisibility);
+    document.getElementById('deleteRouteBtn').addEventListener('click', deleteRoute);
+    
+    // Boundary Management buttons
+    document.getElementById('setBoundaryBtn').addEventListener('click', setBoundary);
+    document.getElementById('clearBoundaryBtn').addEventListener('click', clearBoundary);
+    document.getElementById('detectViolationsBtn').addEventListener('click', detectBoundaryViolations);
+    
+    // Reports buttons
+    document.getElementById('generateReportBtn').addEventListener('click', generateReport);
+    document.getElementById('printReportBtn').addEventListener('click', printReport);
+    document.getElementById('exportReportBtn').addEventListener('click', exportReport);
+    document.getElementById('refreshReportBtn').addEventListener('click', refreshReport);
+
+    // Expose map for debugging if needed
+    window.__ESP32_MAP__ = { map, syndicates, markers, popups, checkpointMarkers, routes };
+  }
+
+  // ========== BUTTON FUNCTION IMPLEMENTATIONS ==========
+
+  // Dashboard Functions
+  function centerOnSelectedSyndicate() {
+    const activeSyndicate = document.querySelector('input[name="syndicate"]:checked').value;
+    
+    if (activeSyndicate === 'all') {
+      const group = new L.featureGroup();
+      Object.keys(markers).forEach(id => {
+        group.addLayer(markers[id]);
+      });
+      map.fitBounds(group.getBounds().pad(0.1));
+    } else {
+      const syndicate = syndicates[activeSyndicate];
+      map.setView(syndicate.latlng, 16);
+    }
+  }
+
+  function showAllSyndicates() {
+    document.getElementById('syndicate-all').checked = true;
+    document.getElementById('syndicate-all').dispatchEvent(new Event('change'));
+  }
+
+  function toggleCheckpoints() {
+    showCheckpoints = !showCheckpoints;
+    
+    removeAllMarkers();
+    
+    const selectedSyndicate = document.querySelector('input[name="syndicate"]:checked').value;
+    
+    addMarkersForSyndicate(selectedSyndicate);
+    
+    const btn = document.getElementById('toggleCheckpoints');
+    btn.innerHTML = showCheckpoints ? 
+      '<i class="fas fa-eye-slash"></i> Hide CPs' : 
+      '<i class="fas fa-map-marker-alt"></i> Show CPs';
+  }
+
+  function toggleRoutes() {
+    routesVisible = !routesVisible;
+    
+    Object.keys(routes).forEach(routeId => {
+      const route = routes[routeId];
+      if (routesVisible) {
+        showRouteOnMap(routeId);
+      } else {
+        hideRouteFromMap(routeId);
+      }
+    });
+    
+    const btn = document.getElementById('toggleRoutes');
+    btn.innerHTML = routesVisible ? 
+      '<i class="fas fa-eye-slash"></i> Hide Routes' : 
+      '<i class="fas fa-route"></i> Show Routes';
+  }
+
+  function locateUser() {
+    map.locate({setView:true,maxZoom:16});
+  }
+
+  function clearAllPopups() {
+    Object.keys(popups).forEach(id => {
+      if (popups[id] && popups[id].parentNode) {
+        document.body.removeChild(popups[id]);
+      }
+    });
+    Object.keys(popups).forEach(key => delete popups[key]);
+  }
+
+  function exportData() {
+    const data = {
+      syndicates: syndicates,
+      routes: routes,
+      exportedAt: new Date().toISOString()
+    };
+    
+    const dataStr = JSON.stringify(data, null, 2);
+    const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+    
+    const exportFileDefaultName = `cadet_navigation_export_${new Date().getTime()}.json`;
+    
+    const linkElement = document.createElement('a');
+    linkElement.setAttribute('href', dataUri);
+    linkElement.setAttribute('download', exportFileDefaultName);
+    linkElement.click();
+    
+    alert('Data exported successfully!');
+  }
+
+  function switchMapStyle(e) {
+    document.querySelectorAll('.map-style-btn').forEach(b => {
+      b.classList.remove('active');
+    });
+    
+    e.target.classList.add('active');
+    
+    const style = e.target.dataset.style;
+    
+    map.eachLayer(layer => {
+      if (layer instanceof L.TileLayer) {
+        map.removeLayer(layer);
+      }
+    });
+    
+    if (style === 'satellite') {
+      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        maxZoom: 19,
+        attribution: '&copy; Esri, DigitalGlobe, GeoEye, Earthstar Geographics, CNES/Airbus DS, USDA, USGS, AeroGRID, IGN, and the GIS User Community'
+      }).addTo(map);
+    } else if (style === 'dark') {
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+        maxZoom: 19,
+        attribution: '&copy; OpenStreetMap contributors &copy; CARTO'
+      }).addTo(map);
+    } else {
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '&copy; OpenStreetMap contributors'
+      }).addTo(map);
+    }
+    
+    // Re-add markers
+    Object.keys(markers).forEach(syndicateId => {
+      markers[syndicateId].addTo(map);
+    });
+    
+    if (showCheckpoints) {
+      const selectedSyndicate = document.querySelector('input[name="syndicate"]:checked').value;
+      addCheckpointMarkers(selectedSyndicate);
+    }
+    
+    if (boundaryPolygon) {
+      boundaryPolygon.addTo(map);
+    }
+    
+    if (routesVisible) {
+      Object.keys(routes).forEach(routeId => {
+        if (routes[routeId].visible) {
+          showRouteOnMap(routeId);
+        }
+      });
+    }
+  }
+
+  function switchTab(e) {
+    document.querySelectorAll('.nav-tab').forEach(t => {
+      t.classList.remove('active');
+    });
+    
+    e.target.classList.add('active');
+    
+    document.querySelectorAll('.tab-content').forEach(content => {
+      content.classList.remove('active');
+    });
+    
+    const tabId = e.target.dataset.tab;
+    document.getElementById(`${tabId}-tab`).classList.add('active');
+  }
+
+  // Exercise Control Functions
+  function startExercise() {
+    if (exerciseActive) return;
+    
+    exerciseActive = true;
+    exerciseStartTime = new Date();
+    exerciseDuration = parseInt(document.getElementById('exerciseDuration').value) || 60;
+    
+    document.getElementById('exerciseIndicator').className = 'exercise-indicator active';
+    document.getElementById('exerciseStatusText').textContent = 'Exercise Active';
+    document.getElementById('startExerciseBtn').disabled = true;
+    document.getElementById('endExerciseBtn').disabled = false;
+    
+    exerciseTimer = setInterval(updateExerciseTimer, 1000);
+    
+    alert(`Exercise started! Duration: ${exerciseDuration} minutes`);
+  }
+
+  function endExercise() {
+    if (!exerciseActive) return;
+    
+    exerciseActive = false;
+    clearInterval(exerciseTimer);
+    
+    document.getElementById('exerciseIndicator').className = 'exercise-indicator inactive';
+    document.getElementById('exerciseStatusText').textContent = 'Exercise Ended';
+    document.getElementById('startExerciseBtn').disabled = false;
+    document.getElementById('endExerciseBtn').disabled = true;
+    
+    alert('Exercise ended!');
+  }
+
+  function resetExercise() {
+    exerciseActive = false;
+    clearInterval(exerciseTimer);
+    
+    document.getElementById('exerciseIndicator').className = 'exercise-indicator inactive';
+    document.getElementById('exerciseStatusText').textContent = 'Exercise Not Started';
+    document.getElementById('exerciseTimer').textContent = '00:00:00';
+    document.getElementById('exerciseProgressBar').style.width = '0%';
+    document.getElementById('exerciseProgressPercent').textContent = '0%';
+    document.getElementById('startExerciseBtn').disabled = false;
+    document.getElementById('endExerciseBtn').disabled = true;
+    
+    hideAllRoutes();
+  }
+
+  function updateExerciseTimer() {
+    if (!exerciseActive) return;
+    
+    const now = new Date();
+    const elapsed = Math.floor((now - exerciseStartTime) / 1000);
+    const totalSeconds = exerciseDuration * 60;
+    
+    const hours = Math.floor(elapsed / 3600);
+    const minutes = Math.floor((elapsed % 3600) / 60);
+    const seconds = elapsed % 60;
+    
+    document.getElementById('exerciseTimer').textContent = 
+      `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    
+    const progressPercent = Math.min(100, (elapsed / totalSeconds) * 100);
+    document.getElementById('exerciseProgressBar').style.width = `${progressPercent}%`;
+    document.getElementById('exerciseProgressPercent').textContent = `${Math.round(progressPercent)}%`;
+    
+    if (elapsed >= totalSeconds) {
+      endExercise();
+      alert('Exercise time has expired!');
+    }
+  }
+
+  // Boundary Management Functions
+  function setBoundary() {
+    const northDeg = parseInt(document.getElementById('northDegrees').value) || 0;
+    const northMin = parseInt(document.getElementById('northMinutes').value) || 0;
+    const northSec = parseFloat(document.getElementById('northSeconds').value) || 0;
+    
+    const southDeg = parseInt(document.getElementById('southDegrees').value) || 0;
+    const southMin = parseInt(document.getElementById('southMinutes').value) || 0;
+    const southSec = parseFloat(document.getElementById('southSeconds').value) || 0;
+    
+    const eastDeg = parseInt(document.getElementById('eastDegrees').value) || 0;
+    const eastMin = parseInt(document.getElementById('eastMinutes').value) || 0;
+    const eastSec = parseFloat(document.getElementById('eastSeconds').value) || 0;
+    
+    const westDeg = parseInt(document.getElementById('westDegrees').value) || 0;
+    const westMin = parseInt(document.getElementById('westMinutes').value) || 0;
+    const westSec = parseFloat(document.getElementById('westSeconds').value) || 0;
+    
+    const north = dmsToDecimal(northDeg, northMin, northSec, 'N');
+    const south = dmsToDecimal(southDeg, southMin, southSec, 'S');
+    const east = dmsToDecimal(eastDeg, eastMin, eastSec, 'E');
+    const west = dmsToDecimal(westDeg, westMin, westSec, 'W');
+    
+    const bounds = [
+      [north, west],
+      [north, east],
+      [south, east],
+      [south, west]
+    ];
+    
+    if (boundaryPolygon) {
+      map.removeLayer(boundaryPolygon);
+    }
+    
+    boundaryPolygon = L.polygon(bounds, {
+      color: '#ef4444',
+      weight: 2,
+      fillColor: '#fef2f2',
+      fillOpacity: 0.1,
+      className: 'boundary-polygon'
+    }).addTo(map);
+    
+    map.fitBounds(boundaryPolygon.getBounds());
+    
+    alert('Boundary set successfully!');
+  }
+
+  function clearBoundary() {
+    if (boundaryPolygon) {
+      map.removeLayer(boundaryPolygon);
+      boundaryPolygon = null;
+    }
+    
+    document.getElementById('violationAlerts').innerHTML = '';
+  }
+
+  function detectBoundaryViolations() {
+    if (!boundaryPolygon) {
+      alert('Please set a boundary first!');
+      return;
+    }
+    
+    const violationAlerts = document.getElementById('violationAlerts');
+    violationAlerts.innerHTML = '';
+    
+    let violationCount = 0;
+    
+    Object.keys(syndicates).forEach(syndicateId => {
+      const syndicate = syndicates[syndicateId];
+      const insideBoundary = boundaryPolygon.getBounds().contains(syndicate.latlng);
+      
+      if (!insideBoundary) {
+        violationCount++;
+        
+        const alertDiv = document.createElement('div');
+        alertDiv.className = 'violation-alert';
+        alertDiv.innerHTML = `
+          <i class="fas fa-exclamation-triangle"></i>
+          <div>
+            <strong>${syndicate.name}</strong> is outside the exercise boundary!
+            <div style="font-size: 12px; margin-top: 4px;">
+              Location: ${syndicate.latlng[0].toFixed(4)}°S, ${syndicate.latlng[1].toFixed(4)}°E
+            </div>
+          </div>
+        `;
+        
+        violationAlerts.appendChild(alertDiv);
+      }
+    });
+    
+    if (violationCount === 0) {
+      violationAlerts.innerHTML = `
+        <div style="text-align: center; color: var(--success); padding: 12px;">
+          <i class="fas fa-check-circle"></i> No boundary violations detected
+        </div>
+      `;
+    }
+  }
+
+  // Reports Functions
+  function generateReport() {
+    let totalCheckpoints = 0;
+    let completedCheckpoints = 0;
+
+    Object.keys(syndicates).forEach(syndicateId => {
+      const syndicate = syndicates[syndicateId];
+      if (syndicate.status === 'active') {
+        totalCheckpoints += syndicate.totalCheckpoints;
+        completedCheckpoints += syndicate.completedCount;
+      }
+    });
+
+    const overallPercent = totalCheckpoints > 0 ? 
+      Math.round((completedCheckpoints / totalCheckpoints) * 100) : 0;
+
+    document.getElementById('overallCompletionCircle').style.setProperty('--p', `${overallPercent}%`);
+    document.getElementById('overallCompletionPercent').textContent = `${overallPercent}%`;
+
+    const syndicateReports = document.getElementById('syndicateReports');
+    syndicateReports.innerHTML = '';
+
+    Object.keys(syndicates).forEach(syndicateId => {
+      const syndicate = syndicates[syndicateId];
+      const completionRate = syndicate.totalCheckpoints > 0 ? 
+        Math.round((syndicate.completedCount / syndicate.totalCheckpoints) * 100) : 0;
+
+      const reportDiv = document.createElement('div');
+      reportDiv.className = 'report-section';
+      reportDiv.innerHTML = `
+        <div class="row" style="margin-bottom: 12px;">
+          <div style="flex: 1;">
+            <strong>${syndicate.name}</strong>
+            <div style="font-size: 12px; color: var(--muted); margin-top: 4px;">
+              Location: ${syndicate.latlng[0].toFixed(4)}°S, ${syndicate.latlng[1].toFixed(4)}°E
+            </div>
+          </div>
+          <div style="text-align: right;">
+            <span class="badge ${syndicate.status === 'active' ? 'active' : ''}" style="margin-bottom: 4px;">
+              ${syndicate.status === 'active' ? 'Active' : 'Inactive'}
+            </span>
+            <div style="font-weight: 600; font-size: 18px; color: #1f2937;">
+              ${completionRate}%
+            </div>
+          </div>
+        </div>
+        <div class="progress-container">
+          <div class="progress-label">
+            <span>Checkpoints Completed</span>
+            <span>${syndicate.completedCount}/${syndicate.totalCheckpoints}</span>
+          </div>
+          <div class="progress-bar">
+            <div class="progress-fill" style="width: ${completionRate}%; background: ${syndicate.color}; opacity: 0.8;"></div>
+          </div>
+        </div>
+      `;
+
+      syndicateReports.appendChild(reportDiv);
+    });
+
+    const checkpointReports = document.getElementById('checkpointReports');
+    checkpointReports.innerHTML = '';
+
+    let allCheckpoints = [];
+    Object.keys(syndicates).forEach(syndicateId => {
+      const syndicate = syndicates[syndicateId];
+      syndicate.checkpoints.forEach(cp => {
+        allCheckpoints.push({
+          id: cp.id,
+          name: cp.name,
+          syndicate: syndicate.name,
+          syndicateId: syndicateId,
+          latlng: cp.latlng,
+          status: cp.status,
+          completionTime: cp.completionTime
+        });
+      });
+    });
+
+    allCheckpoints.sort((a, b) => {
+      if (a.syndicateId !== b.syndicateId) {
+        return a.syndicateId - b.syndicateId;
+      }
+      return a.name.localeCompare(b.name);
+    });
+
+    let currentSyndicate = '';
+    allCheckpoints.forEach(cp => {
+      if (cp.syndicate !== currentSyndicate) {
+        currentSyndate = cp.syndicate;
+        const headerDiv = document.createElement('div');
+        headerDiv.style.fontWeight = '600';
+        headerDiv.style.marginTop = '12px';
+        headerDiv.style.marginBottom = '8px';
+        headerDiv.style.paddingBottom = '8px';
+        headerDiv.style.borderBottom = '2px solid #e5e7eb';
+        headerDiv.textContent = cp.syndicate;
+        checkpointReports.appendChild(headerDiv);
+      }
+
+      const cpDiv = document.createElement('div');
+      cpDiv.className = 'checkpoint-item';
+      cpDiv.innerHTML = `
+        <div class="checkpoint-status ${cp.status}"></div>
+        <div class="checkpoint-info">
+          <div class="checkpoint-name">${cp.name}</div>
+          <div class="checkpoint-time">
+            Coordinates: ${cp.latlng[0].toFixed(4)}°S, ${cp.latlng[1].toFixed(4)}°E<br>
+            ${cp.status === 'completed' ? `✓ Completed at ${cp.completionTime}` : '⏳ Pending completion'}
+          </div>
+        </div>
+      `;
+
+      checkpointReports.appendChild(cpDiv);
+    });
+
+    alert('Report generated successfully!');
+  }
+
+  function printReport() {
+    window.print();
+  }
+
+  function exportReport() {
+    let csvContent = 'data:text/csv;charset=utf-8,';
+    let today = new Date();
+    let dateString = today.toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' });
+    let timeString = today.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+    csvContent += 'Cadet Navigation System - Exercise Report\n';
+    csvContent += `Generated: ${dateString} ${timeString}\n\n`;
+
+    let totalCheckpoints = 0;
+    let completedCheckpoints = 0;
+
+    Object.keys(syndicates).forEach(syndicateId => {
+      const syndicate = syndicates[syndicateId];
+      totalCheckpoints += syndicate.totalCheckpoints;
+      completedCheckpoints += syndicate.completedCount;
+    });
+
+    const overallPercent = totalCheckpoints > 0 ? 
+      Math.round((completedCheckpoints / totalCheckpoints) * 100) : 0;
+
+    csvContent += `Overall Completion Rate,${overallPercent}%\n`;
+    csvContent += `Total Checkpoints,${totalCheckpoints}\n`;
+    csvContent += `Completed,${completedCheckpoints}\n`;
+    csvContent += `Pending,${totalCheckpoints - completedCheckpoints}\n\n`;
+
+    csvContent += 'Syndicate Performance Summary\n';
+    csvContent += 'Syndicate Name,Status,Completed,Total,Percentage,Latitude,Longitude\n';
+
+    Object.keys(syndicates).forEach(syndicateId => {
+      const syndicate = syndicates[syndicateId];
+      const completionRate = syndicate.totalCheckpoints > 0 ? 
+        Math.round((syndicate.completedCount / syndicate.totalCheckpoints) * 100) : 0;
+
+      csvContent += `"${syndicate.name}",${syndicate.status},${syndicate.completedCount},${syndicate.totalCheckpoints},${completionRate}%,${syndicate.latlng[0]},${syndicate.latlng[1]}\n`;
+    });
+
+    csvContent += '\n\nCheckpoint Details\n';
+    csvContent += 'Syndicate,Checkpoint Name,Status,Latitude,Longitude,Completion Time\n';
+
+    let allCheckpoints = [];
+    Object.keys(syndicates).forEach(syndicateId => {
+      const syndicate = syndicates[syndicateId];
+      syndicate.checkpoints.forEach(cp => {
+        allCheckpoints.push({
+          syndicate: syndicate.name,
+          name: cp.name,
+          status: cp.status,
+          latlng: cp.latlng,
+          completionTime: cp.completionTime || 'Pending'
+        });
+      });
+    });
+
+    allCheckpoints.forEach(cp => {
+      csvContent += `"${cp.syndicate}","${cp.name}",${cp.status},${cp.latlng[0]},${cp.latlng[1]},"${cp.completionTime}"\n`;
+    });
+
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `cadet_navigation_report_${new Date().getTime()}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    alert('Report exported successfully!');
+  }
+
+  function refreshReport() {
+    generateReport();
+  }
+
+  // ========== CORE FUNCTIONS ==========
+
+  // Initialize panel collapse functionality
+  function initializePanelCollapse() {
+    // Dashboard panels - Fix button ID references
+    const collapseButtons = {
+      'toggleSyndicates': 'syndicatesPanel',
+      'toggleStats': 'statsPanel',
+      'toggleSysInfo': 'sysPanel',
+      'toggleRoutesPanel': 'routesPanel',
+      'toggleExercisePanel': 'exercisePanel',
+      'toggleBoundariesPanel': 'boundariesPanel',
+      'toggleReportsPanel': 'reportsPanel'
+    };
+    
+    Object.keys(collapseButtons).forEach(btnId => {
+      const button = document.getElementById(btnId);
+      const panelId = collapseButtons[btnId];
+      
+      if (button) {
+        button.addEventListener('click', (e) => {
+          e.preventDefault();
+          togglePanel(panelId, btnId);
+        });
+      }
+    });
+  }
+  
+  function togglePanel(panelId, buttonId) {
+    const panel = document.getElementById(panelId);
+    const button = document.getElementById(buttonId);
+    
+    if (!panel || !button) {
+      console.error(`Panel or button not found: ${panelId}, ${buttonId}`);
+      return;
+    }
+    
+    const icon = button.querySelector('i');
+    const content = panel.querySelector('.content');
+    
+    panel.classList.toggle('collapsed');
+    
+    if (panel.classList.contains('collapsed')) {
+      // Collapsed state
+      icon.className = 'fas fa-chevron-down';
+      button.innerHTML = `<i class="fas fa-chevron-down"></i> Expand`;
+      if (content) content.style.maxHeight = '0';
+    } else {
+      // Expanded state
+      icon.className = 'fas fa-chevron-up';
+      button.innerHTML = `<i class="fas fa-chevron-up"></i> Collapse`;
+      if (content) content.style.maxHeight = '1000px';
+    }
+  }
+
+  // Add markers for the selected syndicate
+  function addMarkersForSyndicate(syndicateId) {
+    if (syndicateId === 'all') {
+      Object.keys(syndicates).forEach(id => {
+        addSingleMarker(id);
+        if (showCheckpoints) {
+          addCheckpointMarkers(id);
+        }
+      });
+    } else {
+      addSingleMarker(syndicateId);
+      if (showCheckpoints) {
+        addCheckpointMarkers(syndicateId);
+      }
+    }
+  }
+  
+  function addSingleMarker(syndicateId) {
+    const syndicate = syndicates[syndicateId];
+    markers[syndicateId] = L.marker(syndicate.latlng, {icon: syndicate.icon}).addTo(map);
+    
+    markers[syndicateId].on('click', function() {
+      showSyndicateDetails(syndicate);
+    });
+  }
+  
+  // Add checkpoint markers for a syndicate
+  function addCheckpointMarkers(syndicateId) {
+    const syndicate = syndicates[syndicateId];
+    
+    syndicate.checkpoints.forEach(checkpoint => {
+      const cpColor = syndicateId <= 3 ? '#10b981' : '#3b82f6';
+      const cpBorder = checkpoint.status === 'completed' ? '#059669' : '#d97706';
+      
+      const cpIcon = L.divIcon({
+        html: `<div style="background-color: ${cpColor}; width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 10px; font-weight: bold; border: 2px solid ${cpBorder}; box-shadow: 0 2px 5px rgba(0,0,0,0.2);">${checkpoint.name}</div>`,
+        className: 'checkpoint-icon',
+        iconSize: [20, 20],
+        iconAnchor: [10, 10]
+      });
+      
+      const marker = L.marker(checkpoint.latlng, {icon: cpIcon}).addTo(map);
+      
+      if (!checkpointMarkers[syndicateId]) {
+        checkpointMarkers[syndicateId] = {};
+      }
+      checkpointMarkers[syndicateId][checkpoint.id] = marker;
+      
+      marker.bindPopup(`
+        <div style="min-width: 200px;">
+          <h4 style="margin: 0 0 8px 0;">${checkpoint.name}</h4>
+          <p style="margin: 4px 0;"><b>Status:</b> 
+            <span style="color: ${checkpoint.status === 'completed' ? '#10b981' : '#f59e0b'}">
+              ${checkpoint.status === 'completed' ? 'Completed' : 'Pending'}
+            </span>
+          </p>
+          <p style="margin: 4px 0;"><b>Syndicate:</b> ${syndicate.name}</p>
+          ${checkpoint.completionTime ? 
+            `<p style="margin: 4px 0;"><b>Completed:</b> ${checkpoint.completionTime}</p>` : ''}
+          <div style="margin-top: 8px; display: flex; gap: 4px;">
+            <button onclick="window.editCheckpoint('${syndicateId}', '${checkpoint.id}')" style="background: #3b82f6; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px;">Edit</button>
+            <button onclick="window.deleteCheckpoint('${syndicateId}', '${checkpoint.id}')" style="background: #ef4444; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px;">Delete</button>
+            ${checkpoint.status === 'pending' ? 
+              `<button onclick="window.completeCheckpoint('${syndicateId}', '${checkpoint.id}')" style="background: #10b981; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px;">Complete</button>` : ''}
+          </div>
+        </div>
+      `);
+    });
+  }
+  
+  // Remove all markers
+  function removeAllMarkers() {
+    Object.keys(markers).forEach(syndicateId => {
+      map.removeLayer(markers[syndicateId]);
+    });
+    
+    Object.keys(checkpointMarkers).forEach(syndicateId => {
+      Object.keys(checkpointMarkers[syndicateId]).forEach(cpId => {
+        map.removeLayer(checkpointMarkers[syndicateId][cpId]);
+      });
+    });
+    
+    Object.keys(checkpointMarkers).forEach(key => delete checkpointMarkers[key]);
+  }
+  
+  // Show syndicate details in a draggable popup
+  function showSyndicateDetails(syndicate) {
+    if (popups[syndicate.id]) {
+      document.body.removeChild(popups[syndicate.id]);
+      delete popups[syndicate.id];
+    }
+    
+    const popup = document.createElement('div');
+    popup.className = 'draggable-popup';
+    popup.id = `popup-${syndicate.id}`;
+    
+    const left = 100 + Math.random() * (window.innerWidth - 400);
+    const top = 100 + Math.random() * (window.innerHeight - 400);
+    popup.style.left = `${left}px`;
+    popup.style.top = `${top}px`;
+    
+    const checkpointListHTML = syndicate.checkpoints.map(cp => `
+      <div class="checkpoint-item" style="border-left: 3px solid ${syndicate.id <= 3 ? '#10b981' : '#3b82f6'}">
+        <div class="checkpoint-status ${cp.status}"></div>
+        <div class="checkpoint-info">
+          <div class="checkpoint-name">${cp.name}</div>
+          <div class="checkpoint-time">
+            ${cp.status === 'completed' ? `Completed at ${cp.completionTime}` : 'Pending completion'}
+          </div>
+        </div>
+        <div class="checkpoint-actions">
+          <button class="checkpoint-action-btn" onclick="window.editCheckpoint('${syndicate.id}', '${cp.id}')" title="Edit">
+            <i class="fas fa-edit"></i>
+          </button>
+          <button class="checkpoint-action-btn" onclick="window.deleteCheckpoint('${syndicate.id}', '${cp.id}')" title="Delete">
+            <i class="fas fa-trash"></i>
+          </button>
+          ${cp.status === 'pending' ? `
+            <button class="checkpoint-action-btn" onclick="window.completeCheckpoint('${syndicate.id}', '${cp.id}')" title="Mark Complete">
+              <i class="fas fa-check"></i>
+            </button>
+          ` : ''}
+        </div>
+      </div>
+    `).join('');
+    
+    popup.innerHTML = `
+      <div class="panel panel-collapsible" id="popup-panel-${syndicate.id}">
+        <div class="popup-header">
+          <h3 style="margin: 0; color: ${syndicate.color}">${syndicate.name}</h3>
+          <div class="popup-controls">
+            <button class="popup-btn edit-btn" title="Edit Syndicate">
+              <i class="fas fa-edit"></i>
+            </button>
+            <button class="popup-btn delete-btn" title="Delete Syndicate">
+              <i class="fas fa-trash"></i>
+            </button>
+            <button class="popup-btn minimize-btn" title="Minimize">
+              <i class="fas fa-minus"></i>
+            </button>
+            <button class="popup-btn close-btn" title="Close">
+              <i class="fas fa-times"></i>
+            </button>
+          </div>
+        </div>
+        
+        <div class="content">
+          <div class="row">
+            <span><span class="status-indicator ${syndicate.status === 'active' ? 'status-online' : 'status-offline'}"></span>Status</span>
+            <strong>${syndicate.status === 'active' ? 'Active' : 'Inactive'}</strong>
+          </div>
+          <div class="row">
+            <span><i class="fas fa-clock"></i> Last Update</span>
+            <strong id="syndicateTime-${syndicate.id}">${new Date().toLocaleTimeString()}</strong>
+          </div>
+          <div class="row">
+            <span><i class="fas fa-map-marker-alt"></i> Location</span>
+            <strong>${syndicate.latlng[0].toFixed(4)}°S, ${syndicate.latlng[1].toFixed(4)}°E</strong>
+          </div>
+          
+          <h4>Checkpoint Progress</h4>
+          <div class="progress-container">
+            <div class="progress-label">
+              <span>Completion</span>
+              <span>${syndicate.completedCount}/${syndicate.totalCheckpoints} (${syndicate.completionPercent}%)</span>
+            </div>
+            <div class="progress-bar">
+              <div class="progress-fill" style="width: ${syndicate.completionPercent}%"></div>
+            </div>
+          </div>
+          
+          <div class="checkpoint-list">
+            ${checkpointListHTML}
+          </div>
+          
+          <div class="controls">
+            <button class="btn btn-primary" onclick="centerOnSyndicate(${syndicate.id})">
+              <i class="fas fa-crosshairs"></i> Center
+            </button>
+            <button class="btn btn-outline" onclick="toggleCheckpointsForSyndicate(${syndicate.id})">
+              <i class="fas fa-map-marker-alt"></i> Toggle CPs
+            </button>
+            <button class="btn btn-warning" onclick="viewSyndicateRoute(${syndicate.id})">
+              <i class="fas fa-route"></i> View Route
+            </button>
+            <button class="btn btn-success" onclick="showAddCheckpointModal(${syndicate.id})">
+              <i class="fas fa-plus"></i> Add CP
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+    
+    document.body.appendChild(popup);
+    popups[syndicate.id] = popup;
+    
+    makeDraggable(popup);
+    
+    const closeBtn = popup.querySelector('.close-btn');
+    const minimizeBtn = popup.querySelector('.minimize-btn');
+    const editBtn = popup.querySelector('.edit-btn');
+    const deleteBtn = popup.querySelector('.delete-btn');
+    
+    closeBtn.addEventListener('click', () => {
+      document.body.removeChild(popup);
+      delete popups[syndicate.id];
+    });
+    
+    minimizeBtn.addEventListener('click', (e) => {
+      const content = popup.querySelector('.content');
+      content.style.display = content.style.display === 'none' ? 'block' : 'none';
+      minimizeBtn.querySelector('i').className = content.style.display === 'none' ? 'fas fa-plus' : 'fas fa-minus';
+    });
+    
+    editBtn.addEventListener('click', () => {
+      editSyndicate(syndicate.id);
+    });
+    
+    deleteBtn.addEventListener('click', () => {
+      deleteSyndicate(syndicate.id);
+    });
+  }
+  
+  // Make element draggable
+  function makeDraggable(element) {
+    let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+    const header = element.querySelector('.popup-header');
+    
+    header.onmousedown = dragMouseDown;
+    
+    function dragMouseDown(e) {
+      e = e || window.event;
+      e.preventDefault();
+      pos3 = e.clientX;
+      pos4 = e.clientY;
+      document.onmouseup = closeDragElement;
+      document.onmousemove = elementDrag;
+    }
+    
+    function elementDrag(e) {
+      e = e || window.event;
+      e.preventDefault();
+      pos1 = pos3 - e.clientX;
+      pos2 = pos4 - e.clientY;
+      pos3 = e.clientX;
+      pos4 = e.clientY;
+      element.style.top = (element.offsetTop - pos2) + "px";
+      element.style.left = (element.offsetLeft - pos1) + "px";
+    }
+    
+    function closeDragElement() {
+      document.onmouseup = null;
+      document.onmousemove = null;
+    }
+  }
+  
+  // Generate syndicate list in the panel
+  function generateSyndicateList() {
+    const syndicateList = document.getElementById('syndicateList');
+    syndicateList.innerHTML = '';
+    
+    const allItem = document.createElement('div');
+    allItem.className = 'radio-item';
+    allItem.innerHTML = `
+      <input type="radio" id="syndicate-all" name="syndicate" value="all">
+      <div class="status online"></div>
+      <label for="syndicate-all">All Syndicates</label>
+      <div class="badge active">${Object.keys(syndicates).length} Total</div>
+    `;
+    syndicateList.appendChild(allItem);
+    
+    Object.keys(syndicates).forEach(id => {
+      const syndicate = syndicates[id];
+      const item = document.createElement('div');
+      item.className = 'radio-item';
+      item.innerHTML = `
+        <input type="radio" id="syndicate${id}" name="syndicate" value="${id}" ${id === '1' ? 'checked' : ''}>
+        <div class="status ${syndicate.status === 'active' ? 'online' : 'offline'}"></div>
+        <label for="syndicate${id}">${syndicate.name}</label>
+        <div class="badge ${syndicate.status === 'active' ? 'active' : ''}">
+          ${syndicate.completedCount}/${syndicate.totalCheckpoints}
+        </div>
+      `;
+      syndicateList.appendChild(item);
+    });
+    
+    document.querySelectorAll('input[name="syndicate"]').forEach(radio => {
+      radio.addEventListener('change', (e) => {
+        const syndicateId = e.target.value;
+        
+        removeAllMarkers();
+        
+        addMarkersForSyndicate(syndicateId);
+        
+        updateStatsForSyndicate(syndicateId);
+      });
+    });
+  }
+  
+  // Update stats based on selected syndicate
+  function updateStatsForSyndicate(syndicateId) {
+    if (syndicateId === 'all') {
+      let totalDistance = 0;
+      let totalTime = 0;
+      let totalSpeed = 0;
+      let maxSpeed = 0;
+      let activeCount = 0;
+      
+      Object.keys(syndicates).forEach(id => {
+        if (syndicates[id].status === 'active') {
+          activeCount++;
+          totalDistance += 5 + Math.random() * 10;
+          totalTime += 20 + Math.random() * 30;
+          const speed = 10 + Math.random() * 15;
+          totalSpeed += speed;
+          if (speed > maxSpeed) maxSpeed = speed;
+        }
+      });
+      
+      document.getElementById('statDist').textContent = totalDistance.toFixed(1) + ' km';
+      document.getElementById('statTime').textContent = Math.floor(totalTime) + ' min';
+      document.getElementById('statAvg').textContent = (totalSpeed / activeCount).toFixed(1) + ' km/h';
+      document.getElementById('statMax').textContent = maxSpeed.toFixed(2) + ' km/h';
+    } else {
+      document.getElementById('statDist').textContent = (5 + Math.random()*10).toFixed(1) + ' km';
+      document.getElementById('statTime').textContent = Math.floor(20 + Math.random()*30) + ' min';
+      document.getElementById('statAvg').textContent = (10 + Math.random()*15).toFixed(1) + ' km/h';
+      document.getElementById('statMax').textContent = (30 + Math.random()*25).toFixed(2) + ' km/h';
+    }
+  }
+  
+  // ROUTE MANAGEMENT FUNCTIONS
+  
+  function generateInitialRoutes() {
+    Object.keys(syndicates).forEach(syndicateId => {
+      const syndicate = syndicates[syndicateId];
+      
+      const waypoints = [];
+      
+      waypoints.push({
+        id: 'start',
+        name: 'Start Point',
+        latlng: syndicate.latlng,
+        type: 'start'
+      });
+      
+      syndicate.checkpoints.forEach((cp, index) => {
+        waypoints.push({
+          id: cp.id,
+          name: cp.name,
+          latlng: cp.latlng,
+          type: 'checkpoint',
+          order: index + 1
+        });
+      });
+      
+      const lastCp = syndicate.checkpoints[syndicate.checkpoints.length - 1];
+      const endPoint = [
+        lastCp.latlng[0] + 0.002,
+        lastCp.latlng[1] + 0.002
+      ];
+      
+      waypoints.push({
+        id: 'end',
+        name: 'End Point',
+        latlng: endPoint,
+        type: 'end'
+      });
+      
+      const distance = calculateRouteDistance(waypoints);
+      
+      routes[nextRouteId] = {
+        id: nextRouteId,
+        name: `${syndicate.name} Route`,
+        syndicateId: parseInt(syndicateId),
+        waypoints: waypoints,
+        distance: distance,
+        visible: false,
+        color: syndicate.color,
+        createdAt: new Date()
+      };
+      
+      nextRouteId++;
+    });
+  }
+  
+  function calculateRouteDistance(waypoints) {
+    let totalDistance = 0;
+    
+    for (let i = 0; i < waypoints.length - 1; i++) {
+      const point1 = waypoints[i].latlng;
+      const point2 = waypoints[i + 1].latlng;
+      
+      const R = 6371;
+      const dLat = (point2[0] - point1[0]) * Math.PI / 180;
+      const dLon = (point2[1] - point1[1]) * Math.PI / 180;
+      const a = 
+        Math.sin(dLat/2) * Math.sin(dLat/2) +
+        Math.cos(point1[0] * Math.PI / 180) * Math.cos(point2[0] * Math.PI / 180) * 
+        Math.sin(dLon/2) * Math.sin(dLon/2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+      const distance = R * c;
+      
+      totalDistance += distance;
+    }
+    
+    return totalDistance;
+  }
+  
+  function updateRouteList() {
+    const routeList = document.getElementById('routeList');
+    routeList.innerHTML = '';
+    
+    if (Object.keys(routes).length === 0) {
+      routeList.innerHTML = `
+        <div style="text-align: center; padding: 20px; color: var(--muted);">
+          <i class="fas fa-route" style="font-size: 24px; margin-bottom: 8px;"></i>
+          <p>No routes created yet</p>
+          <button class="btn btn-primary" onclick="showCreateRouteModal()">
+            <i class="fas fa-plus"></i> Create Your First Route
+          </button>
+        </div>
+      `;
+      return;
+    }
+    
+    Object.keys(routes).forEach(routeId => {
+      const route = routes[routeId];
+      const syndicate = syndicates[route.syndicateId];
+      
+      const routeItem = document.createElement('div');
+      routeItem.className = `route-item ${selectedRouteId == routeId ? 'active' : ''}`;
+      routeItem.innerHTML = `
+        <div style="width: 12px; height: 12px; border-radius: 50%; background: ${route.color}; margin-right: 10px;"></div>
+        <div class="route-info">
+          <div class="route-name">${route.name}</div>
+          <div class="route-stats">
+            <span>${route.waypoints.length} waypoints • ${route.distance.toFixed(2)} km</span>
+          </div>
+        </div>
+        <div class="route-actions">
+          <button class="route-action-btn" onclick="selectRoute(${routeId})" title="Select">
+            <i class="fas fa-eye"></i>
+          </button>
+          <button class="route-action-btn" onclick="toggleSingleRoute(${routeId})" title="${route.visible ? 'Hide' : 'Show'}">
+            <i class="fas ${route.visible ? 'fa-eye-slash' : 'fa-eye'}"></i>
+          </button>
+        </div>
+      `;
+      
+      routeItem.addEventListener('click', (e) => {
+        if (!e.target.closest('.route-action-btn')) {
+          selectRoute(routeId);
+        }
+      });
+      
+      routeList.appendChild(routeItem);
+    });
+  }
+  
+  function selectRoute(routeId) {
+    selectedRouteId = routeId;
+    const route = routes[routeId];
+    
+    updateRouteList();
+    updateRouteDetails(route);
+    
+    document.getElementById('routeDetails').style.display = 'block';
+    
+    showRouteOnMap(routeId);
+    
+    centerOnRoute(route);
+  }
+  
+  function updateRouteDetails(route) {
+    const syndicate = syndicates[route.syndicateId];
+    
+    document.getElementById('selectedRouteName').textContent = route.name;
+    document.getElementById('routeDistance').textContent = `${route.distance.toFixed(2)} km`;
+    
+    let completedCount = 0;
+    route.waypoints.forEach(waypoint => {
+      if (waypoint.type === 'checkpoint') {
+        const checkpoint = syndicate.checkpoints.find(cp => cp.id === waypoint.id);
+        if (checkpoint && checkpoint.status === 'completed') {
+          completedCount++;
+        }
+      }
+    });
+    
+    const checkpointWaypoints = route.waypoints.filter(wp => wp.type === 'checkpoint');
+    const completionPercent = checkpointWaypoints.length > 0 ? 
+      Math.round((completedCount / checkpointWaypoints.length) * 100) : 0;
+    
+    document.getElementById('routeProgressPercent').textContent = `${completionPercent}%`;
+    document.getElementById('routeProgressBar').style.width = `${completionPercent}%`;
+    
+    const waypointsList = document.getElementById('routeWaypoints');
+    waypointsList.innerHTML = '';
+    
+    route.waypoints.forEach((waypoint, index) => {
+      const waypointItem = document.createElement('div');
+      waypointItem.className = 'waypoint-item';
+      
+      let waypointIcon = '';
+      let waypointStatus = '';
+      
+      if (waypoint.type === 'start') {
+        waypointIcon = '<i class="fas fa-play" style="color: #10b981;"></i>';
+      } else if (waypoint.type === 'end') {
+        waypointIcon = '<i class="fas fa-flag-checkered" style="color: #ef4444;"></i>';
+      } else {
+        waypointIcon = `<div class="waypoint-number">${waypoint.order}</div>`;
+        
+        const checkpoint = syndicate.checkpoints.find(cp => cp.id === waypoint.id);
+        if (checkpoint) {
+          waypointStatus = `<span style="color: ${checkpoint.status === 'completed' ? '#10b981' : '#f59e0b'}; font-size: 11px;">
+            ${checkpoint.status === 'completed' ? '✓ Completed' : '⏳ Pending'}
+          </span>`;
+        }
+      }
+      
+      waypointItem.innerHTML = `
+        ${waypointIcon}
+        <div class="waypoint-info">
+          <div class="waypoint-name">${waypoint.name}</div>
+          <div class="waypoint-coords">
+            ${waypoint.latlng[0].toFixed(6)}, ${waypoint.latlng[1].toFixed(6)}
+            ${waypointStatus}
+          </div>
+        </div>
+        <div class="waypoint-actions">
+          <button class="route-action-btn" onclick="centerOnWaypoint(${route.id}, ${index})" title="Center">
+            <i class="fas fa-crosshairs"></i>
+          </button>
+        </div>
+      `;
+      
+      waypointsList.appendChild(waypointItem);
+    });
+  }
+  
+  function showRouteOnMap(routeId) {
+    const route = routes[routeId];
+    if (!route) return;
+    
+    hideRouteFromMap(routeId);
+    
+    const coordinates = route.waypoints.map(wp => wp.latlng);
+    
+    const polyline = L.polyline(coordinates, {
+      color: route.color,
+      weight: 4,
+      opacity: 0.7,
+      className: 'route-polyline',
+      dashArray: '5, 10'
+    }).addTo(map);
+    
+    const markers = [];
+    route.waypoints.forEach((waypoint, index) => {
+      let iconHtml = '';
+      let iconSize = [24, 24];
+      let iconAnchor = [12, 12];
+      
+      if (waypoint.type === 'start') {
+        iconHtml = `<div class="route-start-marker" style="width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 10px;">
+          <i class="fas fa-play"></i>
+        </div>`;
+      } else if (waypoint.type === 'end') {
+        iconHtml = `<div class="route-end-marker" style="width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 10px;">
+          <i class="fas fa-flag-checkered"></i>
+        </div>`;
+      } else {
+        iconHtml = `<div class="route-waypoint-marker" style="width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 10px; font-weight: bold;">
+          ${waypoint.order}
+        </div>`;
+        iconSize = [20, 20];
+        iconAnchor = [10, 10];
+      }
+      
+      const icon = L.divIcon({
+        html: iconHtml,
+        className: 'route-waypoint-icon',
+        iconSize: iconSize,
+        iconAnchor: iconAnchor
+      });
+      
+      const marker = L.marker(waypoint.latlng, { icon: icon }).addTo(map);
+      
+      marker.bindPopup(`
+        <div style="min-width: 200px;">
+          <h4 style="margin: 0 0 8px 0;">${waypoint.name}</h4>
+          <p style="margin: 4px 0;"><b>Type:</b> ${waypoint.type.charAt(0).toUpperCase() + waypoint.type.slice(1)}</p>
+          <p style="margin: 4px 0;"><b>Coordinates:</b><br>
+            ${waypoint.latlng[0].toFixed(6)}°S, ${waypoint.latlng[1].toFixed(6)}°E
+          </p>
+          ${waypoint.type === 'checkpoint' ? `
+            <div style="margin-top: 8px;">
+              <button onclick="centerOnWaypoint(${routeId}, ${index})" style="background: #3b82f6; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px; width: 100%;">
+                Center on Waypoint
+              </button>
+            </div>
+          ` : ''}
+        </div>
+      `);
+      
+      markers.push(marker);
+    });
+    
+    routeLayers[routeId] = {
+      polyline: polyline,
+      markers: markers
+    };
+    
+    route.visible = true;
+    updateRouteList();
+  }
+  
+  function hideRouteFromMap(routeId) {
+    if (routeLayers[routeId]) {
+      map.removeLayer(routeLayers[routeId].polyline);
+      routeLayers[routeId].markers.forEach(marker => {
+        map.removeLayer(marker);
+      });
+      delete routeLayers[routeId];
+    }
+    
+    if (routes[routeId]) {
+      routes[routeId].visible = false;
+    }
+    
+    updateRouteList();
+  }
+  
+  function centerOnRoute(route) {
+    const bounds = L.latLngBounds(route.waypoints.map(wp => wp.latlng));
+    map.fitBounds(bounds.pad(0.1));
+  }
+  
+  function centerOnWaypoint(routeId, waypointIndex) {
+    const route = routes[routeId];
+    if (route && route.waypoints[waypointIndex]) {
+      const waypoint = route.waypoints[waypointIndex];
+      map.setView(waypoint.latlng, 16);
+    }
+  }
+  
+  function toggleRouteVisibility() {
+    if (!selectedRouteId) return;
+    
+    const route = routes[selectedRouteId];
+    if (route.visible) {
+      hideRouteFromMap(selectedRouteId);
+      document.getElementById('toggleRouteVisibilityBtn').innerHTML = '<i class="fas fa-eye"></i> Show Route';
+    } else {
+      showRouteOnMap(selectedRouteId);
+      document.getElementById('toggleRouteVisibilityBtn').innerHTML = '<i class="fas fa-eye-slash"></i> Hide Route';
+    }
+  }
+
+  function showAllRoutes() {
+    routesVisible = true;
+    Object.keys(routes).forEach(routeId => {
+      showRouteOnMap(routeId);
+    });
+    updateRouteList();
+  }
+
+  function hideAllRoutes() {
+    routesVisible = false;
+    Object.keys(routes).forEach(routeId => {
+      hideRouteFromMap(routeId);
+    });
+    updateRouteList();
+  }
+
+  // ========== MODAL FUNCTIONS ==========
+
+  // Add syndicate modal
+  function showAddSyndicateModal() {
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay';
+    modal.innerHTML = `
+      <div class="modal">
+        <div class="modal-header">
+          <h3 style="margin: 0;">Add New Syndicate</h3>
+          <button class="popup-btn close-modal-btn">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label">Syndicate Name</label>
+            <input type="text" class="form-input" id="newSyndicateName" placeholder="Enter syndicate name">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Location (DMS Format)</label>
+            <div style="display: flex; gap: 8px;">
+              <input type="text" class="form-input" id="newSyndicateLatDMS" placeholder="Latitude DMS" value="2°14'6.132&quot;S">
+              <input type="text" class="form-input" id="newSyndicateLngDMS" placeholder="Longitude DMS" value="30°10'52.457&quot;E">
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Status</label>
+            <select class="form-select" id="newSyndicateStatus">
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-outline" id="cancelSyndicateBtn">Cancel</button>
+          <button class="btn btn-primary" id="saveSyndicateBtn">Save Syndicate</button>
+        </div>
+      </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    modal.querySelector('.close-modal-btn').addEventListener('click', () => {
+      document.body.removeChild(modal);
+    });
+    
+    modal.querySelector('#cancelSyndicateBtn').addEventListener('click', () => {
+      document.body.removeChild(modal);
+    });
+    
+    modal.querySelector('#saveSyndicateBtn').addEventListener('click', () => {
+      const name = document.getElementById('newSyndicateName').value;
+      const latDMS = document.getElementById('newSyndicateLatDMS').value;
+      const lngDMS = document.getElementById('newSyndicateLngDMS').value;
+      const status = document.getElementById('newSyndicateStatus').value;
+      
+      if (!name || !latDMS || !lngDMS) {
+        alert('Please fill all fields with valid data');
+        return;
+      }
+      
+      const lat = parseDMS(latDMS);
+      const lng = parseDMS(lngDMS);
+      
+      if (isNaN(lat) || isNaN(lng)) {
+        alert('Invalid DMS coordinates. Please use format like: 2°14\'6.132"S');
+        return;
+      }
+      
+      addSyndicate(name, [lat, lng], status);
+      document.body.removeChild(modal);
+    });
+  }
+
+  function addSyndicate(name, latlng, status) {
+    const id = nextSyndicateId++;
+    const colors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#84cc16'];
+    const color = colors[(id - 1) % colors.length];
+    
+    const icon = L.divIcon({
+      html: `<div style="background-color: ${color}; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 12px; font-weight: bold; border: 2px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.2);">${id}</div>`,
+      className: 'syndicate-icon',
+      iconSize: [28, 28],
+      iconAnchor: [14, 14]
+    });
+    
+    const checkpoints = [];
+    
+    syndicates[id] = {
+      id: id,
+      name: name,
+      latlng: latlng,
+      icon: icon,
+      status: status,
+      color: color,
+      checkpoints: checkpoints,
+      completionPercent: 0,
+      completedCount: 0,
+      totalCheckpoints: 0
+    };
+    
+    generateSyndicateList();
+    
+    const selectedSyndicate = document.querySelector('input[name="syndicate"]:checked').value;
+    if (selectedSyndicate === 'all') {
+      addSingleMarker(id);
+    }
+    
+    alert(`Syndicate "${name}" added successfully!`);
+  }
+
+  // Add checkpoint modal
+  function showAddCheckpointModal(syndicateId = null) {
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay';
+    
+    let syndicateOptions = '';
+    Object.keys(syndicates).forEach(id => {
+      syndicateOptions += `<option value="${id}" ${syndicateId == id ? 'selected' : ''}>${syndicates[id].name}</option>`;
+    });
+    
+    let multipleSyndicateOptions = '';
+    Object.keys(syndicates).forEach(id => {
+      multipleSyndicateOptions += `
+        <div class="checkbox-item">
+          <input type="checkbox" id="syndicate-${id}" value="${id}" ${syndicateId == id ? 'checked' : ''}>
+          <label for="syndicate-${id}">${syndicates[id].name}</label>
+        </div>
+      `;
+    });
+    
+    modal.innerHTML = `
+      <div class="modal">
+        <div class="modal-header">
+          <h3 style="margin: 0;">Add New Checkpoint</h3>
+          <button class="popup-btn close-modal-btn">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label">Checkpoint Name</label>
+            <input type="text" class="form-input" id="newCheckpointName" placeholder="Enter checkpoint name (e.g., CP1)">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Location (DMS Format)</label>
+            <div style="display: flex; gap: 8px;">
+              <input type="text" class="form-input" id="newCheckpointLatDMS" placeholder="Latitude DMS" value="2°14'6.132&quot;S">
+              <input type="text" class="form-input" id="newCheckpointLngDMS" placeholder="Longitude DMS" value="30°10'52.457&quot;E">
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Assign to Syndicate(s)</label>
+            <div class="checkbox-group">
+              ${multipleSyndicateOptions}
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Status</label>
+            <select class="form-select" id="newCheckpointStatus">
+              <option value="pending">Pending</option>
+              <option value="completed">Completed</option>
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-outline" id="cancelCheckpointBtn">Cancel</button>
+          <button class="btn btn-primary" id="saveCheckpointBtn">Save Checkpoint</button>
+        </div>
+      </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    modal.querySelector('.close-modal-btn').addEventListener('click', () => {
+      document.body.removeChild(modal);
+    });
+    
+    modal.querySelector('#cancelCheckpointBtn').addEventListener('click', () => {
+      document.body.removeChild(modal);
+    });
+    
+    modal.querySelector('#saveCheckpointBtn').addEventListener('click', () => {
+      const name = document.getElementById('newCheckpointName').value;
+      const latDMS = document.getElementById('newCheckpointLatDMS').value;
+      const lngDMS = document.getElementById('newCheckpointLngDMS').value;
+      const status = document.getElementById('newCheckpointStatus').value;
+      
+      const selectedSyndicates = [];
+      modal.querySelectorAll('.checkbox-item input[type="checkbox"]:checked').forEach(checkbox => {
+        selectedSyndicates.push(checkbox.value);
+      });
+      
+      if (!name || !latDMS || !lngDMS || selectedSyndicates.length === 0) {
+        alert('Please fill all fields with valid data and select at least one syndicate');
+        return;
+      }
+      
+      const lat = parseDMS(latDMS);
+      const lng = parseDMS(lngDMS);
+      
+      if (isNaN(lat) || isNaN(lng)) {
+        alert('Invalid DMS coordinates. Please use format like: 2°14\'6.132"S');
+        return;
+      }
+      
+      selectedSyndicates.forEach(syndicateId => {
+        addCheckpointToSyndicate(syndicateId, name, [lat, lng], status);
+      });
+      
+      document.body.removeChild(modal);
+    });
+  }
+
+  function addCheckpointToSyndicate(syndicateId, name, latlng, status) {
+    const syndicate = syndicates[syndicateId];
+    const completionTime = status === 'completed' ? new Date().toLocaleTimeString() : null;
+    
+    const checkpoint = {
+      id: `cp${nextCheckpointId++}`,
+      name: name,
+      latlng: latlng,
+      status: status,
+      completionTime: completionTime,
+      colorClass: syndicateId <= 3 ? 'cp-color-1' : 'cp-color-4'
+    };
+    
+    syndicate.checkpoints.push(checkpoint);
+    
+    syndicate.totalCheckpoints = syndinate.checkpoints.length;
+    syndinate.completedCount = syndinate.checkpoints.filter(cp => cp.status === 'completed').length;
+    syndinate.completionPercent = Math.round((syndinate.completedCount / syndinate.totalCheckpoints) * 100);
+    
+    generateSyndicateList();
+    
+    const selectedSyndicate = document.querySelector('input[name="syndicate"]:checked').value;
+    if (showCheckpoints && (selectedSyndicate === 'all' || selectedSyndicate == syndicateId)) {
+      removeAllMarkers();
+      addMarkersForSyndicate(selectedSyndicate);
+    }
+    
+    if (popups[syndicateId]) {
+      document.body.removeChild(popups[syndicateId]);
+      delete popups[syndicateId];
+      showSyndicateDetails(syndicate);
+    }
+  }
+
+  // ========== EXPOSE FUNCTIONS TO WINDOW OBJECT ==========
+  
+  // Expose functions for inline onclick handlers
+  window.editCheckpoint = function(syndicateId, checkpointId) {
+    console.log(`Edit checkpoint ${checkpointId} for syndicate ${syndicateId}`);
+    // Implementation for edit checkpoint
+  };
+  
+  window.deleteCheckpoint = function(syndicateId, checkpointId) {
+    console.log(`Delete checkpoint ${checkpointId} for syndicate ${syndicateId}`);
+    // Implementation for delete checkpoint
+  };
+  
+  window.completeCheckpoint = function(syndicateId, checkpointId) {
+    console.log(`Complete checkpoint ${checkpointId} for syndicate ${syndicateId}`);
+    // Implementation for complete checkpoint
+  };
+  
+  window.centerOnSyndicate = function(syndicateId) {
+    const syndicate = syndicates[syndicateId];
+    if (syndicate) {
+      map.setView(syndicate.latlng, 16);
+    }
+  };
+  
+  window.toggleCheckpointsForSyndicate = function(syndicateId) {
+    console.log(`Toggle checkpoints for syndicate ${syndicateId}`);
+    // Implementation for toggling checkpoints
+  };
+  
+  window.viewSyndicateRoute = function(syndicateId) {
+    console.log(`View route for syndicate ${syndicateId}`);
+    // Implementation for viewing syndicate route
+  };
+
+  // ========== INITIALIZATION ==========
+  
+  // Ensure DOM is ready, then initialize.
+  function domReady(fn){
+    if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fn);
+    else fn();
+  }
+
+  domReady(()=>{
+    if(typeof L === 'undefined'){
+      const s = document.createElement('script');
+      s.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+      s.crossOrigin = '';
+      s.onload = () => initMap();
+      s.onerror = () => console.error('Failed to load Leaflet from CDN. Please check network or load it locally.');
+      document.head.appendChild(s);
+    } else {
+      initMap();
+    }
+  });
+</script>
+</body>
+</html>
